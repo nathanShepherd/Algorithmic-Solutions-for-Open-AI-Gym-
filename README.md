@@ -1,1 +1,1 @@
-# Algorithmic-Solutions-for-Open-AI-Gym-
+# Algorithmic-Solutions-for-Open-AI-Gym
