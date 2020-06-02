@@ -18,7 +18,7 @@ def play_random(viz=True):
     return obs
 
 if __name__ == "__main__":
-    frames = play_random(True)
+    frames = play_random(False)
     sorts = []
     for i in range(len(frames[0])):
         sorts.append([])
@@ -27,10 +27,11 @@ if __name__ == "__main__":
 
     aux = []
     for k in range(1000):
-        if k%100==0:print(k*100/1000)
-        frames = play_random(viz=False)        
+        if k%100==0:print(k*100/1000, frames)
+        frames = play_random(viz=True)        
         aux.append(frames)
         
+''' Visualizations        
     aux = [np.array(m).T for m in aux]
     total = []
     for i in range(len(aux[0])):
@@ -40,4 +41,4 @@ if __name__ == "__main__":
 
     for i in range(len(total)):
         print(i, np.mean(total[i]))
-    
+'''
