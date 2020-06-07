@@ -509,7 +509,7 @@ class MarkovAgent():
     
 def main():  
   agent = MarkovAgent() #MarkovChain()
-  epochs = 10
+  epochs = 50
   rand_rew = play_episode(epochs, agent, viz=False)
   agent.view_model_params()
   agent_rew = viz_performance(epochs, agent, viz=False)
@@ -521,7 +521,8 @@ def main():
   plt.plot(np.arange(epochs), agent_rew, label='Agent')
   plt.ylabel("Reward")
   plt.legend()
-  plt.show()  
+  plt.show()
+  viz_performance(epochs, agent, viz=True)
 
 if __name__ == "__main__":
   np.random.seed(0)
