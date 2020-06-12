@@ -43,7 +43,9 @@ def play_episode(epochs, agent, ep_length=200, viz=True):
       ep_reward += reward
 
       if done:
-        print("\nEpisode", episode," completed after %s timesteps" % str(frame))
+        if episode % (epochs//5) == 0:
+          print(f"\nEpisode: {episode}",
+                    f"\tNum timesteps :{str(frame)}")
         f_reward[-1] = (0)
         agent.terminal(ep_obs, f_reward, ep_acts)
         all_r.append(ep_reward)
@@ -72,8 +74,9 @@ def viz_performance(epochs, agent, ep_length=200, viz=True):
         ep_reward += reward
       
         if done:
-          print("\nEpisode", episode," completed after %s timesteps" % str(frame))
-          print("Reward: ", ep_reward)
+          if episode % (epochs//5) == 0:
+            print(f"\nEpisode: {episode}",
+                     f"\tNum timesteps :{str(frame)}")
           f_reward[-1] = 0
           agent.terminal(ep_obs, f_reward, ep_acts)
 
@@ -236,7 +239,7 @@ class MarkovChain:
       
     for state in range(len(self.t_prob)):
       E_i = self.expected_consecutive_obs(state)
-      print('State: {', state, '}, E[observing {state}]: {', E_i, '}')
+      print(f'State: {state}, E[observing {state}]: {E_i}')
 
 def test_MM():
   agent = MarkovChain()
@@ -509,7 +512,7 @@ class MarkovAgent():
     
 def main():  
   agent = MarkovAgent() #MarkovChain()
-  epochs = 50
+  epochs = 10
   rand_rew = play_episode(epochs, agent, viz=False)
   agent.view_model_params()
   agent_rew = viz_performance(epochs, agent, viz=False)

@@ -34,7 +34,6 @@ update policy on done:
 			- Value function replay (total future states)
 			--> Determine E[Reward] of all future states
 
-
 		state dynamics (Markov Model):
 			- E[next_state] given the current state and action
 			- Utilize state exploration 
