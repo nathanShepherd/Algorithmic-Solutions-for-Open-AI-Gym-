@@ -107,7 +107,7 @@ def save_observations(filename, epochs=1000):
     
     #heatmap(obs_matrix, "Observations by episode")
     
-def seaborn_heatmap(df, xyz=('x','y','z')):
+def seaborn_heatmap(df, xyz=('x','y','z'), annotate=False):
     print("Heatmap:")
     df.info()
     df[xyz[1]] = round(df[xyz[1]], 2)
@@ -116,7 +116,7 @@ def seaborn_heatmap(df, xyz=('x','y','z')):
                                            values= xyz[2], # z-axis
                                            columns= xyz[0], 
                                            aggfunc=np.median)
-    sb.heatmap(pivot, annot=False).set_title(f'xyz, {xyz}')
+    sb.heatmap(pivot, annot=annotate).set_title(f'xyz, {xyz}')
     
     plt.show()
     

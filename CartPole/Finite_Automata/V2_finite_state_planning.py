@@ -2,6 +2,7 @@ import gym
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.stats import mode
 
 import seaborn as sb
 
@@ -58,14 +59,14 @@ def eval_performance(agent, epochs,
             #   reward = 0
             
             if not terminal:
-                agent.update_policy(action, obs[-2], obs[-1], total_reward)
+                agent.update_policy(action, obs[-2], obs[-1], reward)
             else:
                 
                 reward = 0
                 rewards.append(total_reward)
                 agent.terminal(obs, reward, ep_acts)
                 
-                agent.update_policy(action, obs[-2], obs[-1], total_reward)
+                agent.update_policy(action, obs[-2], obs[-1], reward)
                 break
             
         if ep % (epochs//5) == 0:
@@ -82,14 +83,14 @@ def eval_performance(agent, epochs,
     df['min_reward'] = df[['reward']].rolling(100).min()
     
     df = df.set_index('epoch')
-    print(df)
+    #print(df)
     df.plot()
 
     plt.ylabel('Episode Reward')
     plt.show()
 
     ### Plot learned parameters of model ###
-    ax = 1
+    ax = 3
     q_axis = agent.delta[ax]
     #print('q axis', q_axis)
     q_len = len(q_axis)
@@ -118,7 +119,7 @@ def eval_performance(agent, epochs,
     #seaborn_heatmap(f_pivot, xyz=('obs_axis', 'final_state', 'state_count'))
 
     # Visualize plans and plan value
-    ax = 3
+    ax = 1
     q_axis = agent.plans[ax]
     print('q axis', q_axis)
     q_len = len(q_axis)
@@ -164,7 +165,7 @@ class q_learning():
 
         # Digitize() maps obs in observation to rng(0, digi_max)
         # num_bins  -->  Divisor on X in sigmoid_array
-        self.digitize_max = 20 #800 # 
+        self.digitize_max = 50 #800 # 
         self.num_bins = self.digitize_max// 2
             
         
@@ -186,7 +187,7 @@ class q_learning():
 
         # Plans value associates reward for following a plan (via hash(str(acts)) )
         self.plan_value = {}
-        self.max_plan_value = 0 # TODO: deprioritize max values
+        self.max_plan_value = np.zeros((obs_len)) # TODO: deprioritize max values
 
     
     def sigmoid_array(self, X, num_bins = 20, upper_lim = 10):
@@ -217,9 +218,11 @@ class q_learning():
         
         return plan_values
 
-    def act(self, obs, time_t=0):
+    def act(self, obs, time_t=0, simulated=False):
         d_idx = 3 # best at 3 (pole velocity at tip), fails with other idxs
-        obs = self.digitize(obs) # [axis]
+        
+        if not simulated:
+            obs = self.digitize(obs) # [axis]
         
         if np.random.random() < self.rand_act_prob:
             return np.random.randint(self.act_len)
@@ -235,27 +238,41 @@ class q_learning():
 
             ## Take action that does not result in end state
             # final_states[next_states[action]][idx] > 0 if obs and action result in final state
+
+        suggested_acts = []
+        for idx in range(len(obs)):
+            plan_value = self.next_state_action_values(idx, obs)
         
-        next_states = self.delta[d_idx][obs[d_idx]] # next state for each action
-        #print(next_states)
-        fs_count_given_act_0 = self.final_states[next_states[0]][d_idx]
-        fs_count_given_act_1 = self.final_states[next_states[1]][d_idx]
-        if  fs_count_given_act_0 > 1 and fs_count_given_act_1 == 0:
-            #print('final_state_act0')
-            return 1
-        if fs_count_given_act_1 > 1 and fs_count_given_act_0 == 0:
-            #print('final_state_act1')
-            return 0
+            if len(plan_value) == 0: # or max(plan_values[:, 1]) < 100:
+                return np.random.randint(self.act_len)
         
+            choice = np.argmax(plan_value[:, 1])
+            choice_max = max(plan_value[:, 1])
+            suggested_acts.append(np.array([self.acts_dict[plan_value[choice][0]], choice_max]))
+
+        choice_act = mode(np.array(suggested_acts)[:, 0]).mode.astype(int)[0]
+        #print(choice_act)
+        '''
         plan_values = self.next_state_action_values(d_idx, obs)
-        if len(plan_values) == 0: # or max(plan_values[:, 1]) < 100:
+
+        ### Adding new obs axis
+        plan_v_idx0 = self.next_state_action_values(2, obs)
+        
+        
+        if len(plan_values) == 0 or len(plan_v_idx0) == 0: # or max(plan_values[:, 1]) < 100:
             return np.random.randint(self.act_len)
         
         choice = np.argmax(plan_values[:, 1])
-        
-        
+        choice_max = max(plan_values[:, 1])
+        choice_act = self.acts_dict[plan_values[choice][0]]
+
+        plan_v0_max = max(plan_v_idx0[:, 1])
+        if plan_v0_max > choice_max:
+            choice = np.argmax(plan_v_idx0[:, 1])
+            choice_act = self.acts_dict[plan_v_idx0[choice][0]]
+        '''
         # Select hash index (0) from chosen plan value
-        return self.acts_dict[plan_values[choice][0]]
+        return choice_act
 
     def set_final_state(self, obs_d):
         # obs_d = digitized observation
@@ -271,6 +288,7 @@ class q_learning():
         return float(hash(f'{start}|{end}|{d_idx}|{action}'))
 
     def update_policy(self, action, state, next_state, reward, ep_acts=[]):
+        #future_state = next_state
         state = self.digitize(np.array(state))
         next_state = self.digitize(np.array(next_state))
 
@@ -286,6 +304,20 @@ class q_learning():
         #               q_value[s, a] = E[R(t+ 1) + future_decay(max(Q[state, action])]
         #               state_value = E[R(t+ 1) + future_decay(max(state_value)]
         # Update plans
+        # Follow policy and determine if reaches final state
+        reaches_terminal = False
+        for d_idx in range(len(state)):
+            future_state = next_state
+            for frame in range(5):
+                future_action = self.act(future_state, simulated=True)
+                #print(future_state)
+                future_state = self.delta[:, future_state[d_idx], future_action]
+            
+            if self.final_states[future_state[d_idx]][d_idx] > 0:
+                reaches_terminal = True
+
+        #reaches_terminal = False ########## NOte
+        
         for d_idx in range(len(state)):            
             start, end = state[d_idx], next_state[d_idx]
             #if reward == 0:
@@ -306,7 +338,7 @@ class q_learning():
                     future_state_value = 0
                     
                 if self.final_states[state[d_idx]][d_idx] > 0: #[next_state[d_idx]][d_idx] > 0:
-                    future_state_value -=  self.final_states[next_state[d_idx]][d_idx]
+                    future_state_value -=  0.1 * self.final_states[state[d_idx]][d_idx]
                     #future_state_value /=  self.final_states[state[d_idx]][d_idx]
 
                 # Determine if final state is likely given next state
@@ -318,10 +350,23 @@ class q_learning():
                                                     
                 #if self.final_states[state[d_idx]][d_idx] > 0:
                 #    reward /= self.final_states[state[d_idx]][d_idx]
+
+                if self.final_states[future_state[d_idx]][d_idx] > 0:
+                    future_state_value = 0
+                
+                if reaches_terminal:
+                    future_state_value = 0
                     
-                reward += 0.1 * future_state_value
+                reward += .1 * future_state_value
                 if self.plan_value[h_str] > 0:
-                    self.plan_value[h_str] += (reward * .01) #0.1) #/ (self.plan_value[h_str] ) #* self.decay #+= reward
+                    self.plan_value[h_str] += (reward * .01) #0.01) #/ (self.plan_value[h_str] ) #* self.decay #+= reward
+
+                    if self.plan_value[h_str] > 0.7 * self.max_plan_value[d_idx]:
+                        self.plan_value[h_str] *= 0.5
+                        
+                    if self.plan_value[h_str] > self.max_plan_value[d_idx]:
+                        self.max_plan_value[d_idx] = 0.7 * self.plan_value[h_str]
+                        
                 else:
                     self.plan_value[h_str] = future_state_value
             else:
@@ -338,7 +383,8 @@ class q_learning():
         
         self.set_final_state(ep_obs[-1])
         #self.set_final_state(ep_obs[-2])
-
+        #self.set_final_state(ep_obs[-3])
+        #self.set_final_state(ep_obs[-4])
         '''
         # Update plan
         acts_hash = hash(str(ep_acts))
@@ -355,9 +401,9 @@ class q_learning():
     
 if __name__ == "__main__":
     np.random.seed(99)
-    epochs = 2 * 1000
+    epochs = 3 * 100
     agent = q_learning(env)
-    df = eval_performance(agent, epochs, viz=False)
+    df = eval_performance(agent, epochs, viz=True)
     
 
     # Mean reward is 20.5 from q_learning after init, no training, 100ep
