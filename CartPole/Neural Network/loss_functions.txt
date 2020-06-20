@@ -1,0 +1,30 @@
+f(X) is any mapping from X --> y
+
+
+Design model to optimize generalizable f(X) given X
+
+f(X) is any mapping from X --> y
+
+Model learns g(X) given a subset of Y:
+
+Loss functions evaluate similarity of g(X) and f(X):
+	H(P(x)) = -sum( P(x) * log(P(x)) )
+	- average information gain from P(X) ~ P
+	H(P(x), E(x)) = -sum( P(x) * log(E(x)) )
+	- average information gain | P ~ P, E ~ E
+	D_kl(P || E) = H(P, E) - H(P)
+	- average difference in distributions
+
+	classification
+	- If output is a probability
+		- Cross Entropy (slow, low variance)
+		- H([yi, for each of Y|X])
+	- Binary classes
+		- Hinge loss (fast, high variance)
+		- Preds are penalized:
+		  if wrong or uncertain
+		
+	regression
+	- Mean Absolute Error: 
+		(sum(abs(g(xi) - yi)) )/N
+	- MSE: ( sum(g(xi) - yi)**2 )/ N
