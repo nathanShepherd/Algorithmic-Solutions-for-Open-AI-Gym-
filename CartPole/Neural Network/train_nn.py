@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from nn import NN
 
 def train_epoch(data_loader, model, criterion, optimizer):
-    for i, (X, labels) in enumerate(data_loader):
+    print(data_loader)
+    for X, labels in data_loader:
         optimizer.zero_grad()
 
         output = model(X)
@@ -28,14 +29,14 @@ def evaluate_episode(data, model, loss_f, epoch):
         #y = torch.tensor([max(yi, 0.9) for yi in y])
         #print(y)
         output = model(X)
-        
+        #y = y.view(-1, 1)
         predicted = torch.argmax(output.data, axis=1)
         #predicted = output.data
         y_true.append(y)
         y_pred.append(predicted)
         total += y.size(0)
         #print(f'm.out: {predicted},\tlabel:{y}')
-        
+        #quit()
         correct += (predicted == y).sum().item()
         running_loss.append(loss_f(output, y).item())
             
@@ -74,7 +75,7 @@ def main():
     optimizer = torch.optim.Adam(model.parameters(), lr)
     
     '''
-    model, start_epoch, stats = restore_checkpoint(model, config('challenge.checkpoint'))
+    m, start_ep, stats = restore_checkpoint(model))
     '''
     start_epoch = 0
     stats= pd.DataFrame(columns=['val_acc', 'val_loss', 'train_acc', 'train_loss'])
