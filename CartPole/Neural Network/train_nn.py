@@ -60,10 +60,7 @@ def evaluate_epoch(training, validation, model, loss_f, epoch, stats):
 
     stats.loc[epoch] = [val_acc, val_loss, train_acc, train_loss]
     #stats.append([val_acc, val_loss, train_acc, train_loss])
-    '''
-    utils.log_cnn_training(epoch, stats)
-    utils.update_cnn_training_plot(axes, epoch, stats)
-    '''
+
 
 def main():
 
@@ -99,11 +96,10 @@ def main():
         
         evaluate_epoch(training, validation, model, loss_f, epoch+1, stats)
         
-        #save_checkpoint(model, epoch+1, config('challenge.checkpoint'), stats)
+        #save_checkpoint(model,...
 
     print('Finished Training')
-    #utils.save_cnn_training_plot(fig, name='challenge')
-    #utils.hold_training_plot()
+
     
 def load_data():
     # data loaders
