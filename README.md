@@ -1,6 +1,7 @@
 # Algorithmic Solutions for Open AI Gym
 
 Using machine learning and computer science fundamentals to solve [Open AI Gym](https://gym.openai.com/) problems.
+
 ![reinforcement_learning](/graphs/reinforcement_learning.png)
 
 policy: input_frame --> output_action
